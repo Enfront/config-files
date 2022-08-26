@@ -1,0 +1,61 @@
+version: '3'
+
+services:
+  enfront-backend:
+    container_name: enfront-backend
+    build:
+      context: "../backend"
+      target: "dev"
+    volumes:
+      - ../backend:/usr/src/app
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "8000:8000/tcp"
+    depends_on:
+      - enfront-postgres
+
+  enfront-frontend:
+    container_name: enfront-frontend
+    build:
+      context: "../frontend"
+      target: "dev"
+    volumes:
+      - ../frontend:/app
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "8080:8080/tcp"
+    depends_on:
+      - enfront-backend
+
+  enfront-nginx:
+    container_name: enfront-nginx
+    build: ./proxy-dev
+    ports:
+      - "80:80"
+    links:
+      - enfront-backend
+      - enfront-frontend
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  enfront-postgres:
+    container_name: enfront-postgres
+    image: postgres
+    restart: always
+    volumes:
+      - www_pg-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=enfront
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432/tcp"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d enfront"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  www_pg-data:

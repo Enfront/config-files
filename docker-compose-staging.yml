@@ -1,0 +1,102 @@
+version: '3'
+
+services:
+  enfront-backend:
+    container_name: enfront-backend
+    image: registry.digitalocean.com/enfront/enfront-backend-staging:latest
+    environment:
+      - DB_SERVER=enfront-postgres
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - CP_API_KEY=${CP_API_KEY}
+      - CP_API_SECRET=${CP_API_SECRET}
+      - CP_IPN_SECRET=${CP_IPN_SECRET}
+      - CP_MERCHANT_ID=${CP_MERCHANT_ID}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
+      - DB_HOST=${DB_HOST}
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID}
+      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
+      - MG_API_SECRET=${MG_API_SECRET}
+      - MG_ORDER_API_SECRET=${MG_ORDER_API_SECRET}
+      - SECRET_KEY=${SECRET_KEY}
+      - RECAPTCHA_PUBLIC_KEY=${RECAPTCHA_PUBLIC_KEY}
+      - RECAPTCHA_PRIVATE_KEY=${RECAPTCHA_PRIVATE_KEY}
+      - SITE_URL=${SITE_URL}
+      - SITE_SCHEME=${SITE_SCHEME}
+      - STRIPE_KEY=${STRIPE_KEY}
+      - STRIPE_WEBHOOK=${STRIPE_WEBHOOK}
+      - PAYPAL_ENVIRONMENT=${PAYPAL_ENVIRONMENT}
+    ports:
+      - "8000:8000/tcp"
+    depends_on:
+      - enfront-postgres
+
+  enfront-frontend:
+    container_name: enfront-frontend
+    image: registry.digitalocean.com/enfront/enfront-frontend-staging:latest
+    ports:
+      - "8080:8080/tcp"
+    depends_on:
+      - enfront-backend
+
+  enfront-nginx:
+    build: ./proxy-staging
+    container_name: enfront-nginx
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+      - /etc/certbot:/etc/certbot
+    ports:
+      - "80:80"
+      - "443:443"
+    links:
+      - enfront-backend
+      - enfront-frontend
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  enfront-postgres:
+    image: postgres
+    container_name: enfront-postgres
+    restart: always
+    volumes:
+      - www_pg-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5432:5432/tcp"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d enfront"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  enfront-watchtower:
+    container_name: enfront-watchtower
+    image: containrrr/watchtower
+    environment:
+      WATCHTOWER_SCHEDULE: 0 0 10 * * *
+      TZ: America/Chicago
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_DEBUG: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /root/.docker/config.json:/config.json
+
+  enfront-certbot:
+    container_name: enfront-certbot
+    image: certbot/dns-digitalocean
+    restart: unless-stopped
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+      - /etc/certbot:/etc/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  www_pg-data:
