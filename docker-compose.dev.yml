@@ -5,11 +5,12 @@ services:
     container_name: enfront-backend
     build:
       context: "../backend"
-      target: "dev"
     volumes:
       - ../backend:/usr/src/app
     environment:
       CHOKIDAR_USEPOLLING: "true"
+    env_file:
+      - ../backend/api/env/.env-dev
     ports:
       - "8000:8000/tcp"
     depends_on:
@@ -19,7 +20,6 @@ services:
     container_name: enfront-frontend
     build:
       context: "../frontend"
-      target: "dev"
     volumes:
       - ../frontend:/app
     environment:
