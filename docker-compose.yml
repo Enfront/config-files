@@ -11,7 +11,7 @@ services:
       - BTC_API_KEY=${BTC_API_KEY}
       - BTC_HOST=${BTC_HOST}
       - BTC_STORE_ID=${BTC_STORE_ID}
-      - BTC_WEBHOOK=${BTC_WEBHOOK}
+      - BTC_WEBHOOK_SECRET=${BTC_WEBHOOK_SECRET}
       - CP_API_KEY=${CP_API_KEY}
       - CP_API_SECRET=${CP_API_SECRET}
       - CP_IPN_SECRET=${CP_IPN_SECRET}
@@ -65,7 +65,7 @@ services:
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   enfront-postgres:
-    image: postgres
+    image: postgres:14
     container_name: enfront-postgres
     restart: always
     volumes:

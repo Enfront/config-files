@@ -5,6 +5,7 @@ services:
     container_name: enfront-backend
     build:
       context: "../backend"
+      target: "dev"
     volumes:
       - ../backend:/usr/src/app
     environment:
@@ -20,6 +21,7 @@ services:
     container_name: enfront-frontend
     build:
       context: "../frontend"
+      target: "dev"
     volumes:
       - ../frontend:/app
     environment:
@@ -41,7 +43,7 @@ services:
 
   enfront-postgres:
     container_name: enfront-postgres
-    image: postgres
+    image: postgres:14
     restart: always
     volumes:
       - www_pg-data:/var/lib/postgresql/data
